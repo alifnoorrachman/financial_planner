@@ -96,6 +96,15 @@ class DatabaseService {
     await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> deleteTransactionsByAccountId(int accountId) async {
+    final db = await instance.database;
+    await db.delete(
+      'transactions',
+      where: 'accountId = ?',
+      whereArgs: [accountId],
+    );
+  }
+
   // --- FUNGSI UNTUK AKUN ---
   Future<void> insertAccount(Account account) async {
     final db = await instance.database;

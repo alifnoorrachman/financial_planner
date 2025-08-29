@@ -1,7 +1,14 @@
-// lib/views/dashboard_page.dart
+// lib/views/dashboard_view.dart
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart'; // <-- Tambahkan import ini
+
+import '../models/category_model.dart';
+import '../viewmodels/category_viewmodel.dart';
+import '../viewmodels/dashboard_viewmodel.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -11,64 +18,106 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // State untuk melacak tab waktu yang aktif (Week, Month, Year)
-  int _timeTabIndex = 1; // Default ke 'Month'
+  // --- KONTROL BARU UNTUK PAGEVIEW ---
+  final PageController _pageController = PageController();
 
-  // Data contoh untuk kategori. Di aplikasi nyata, ini akan datang dari ViewModel.
-  final List<Map<String, dynamic>> categories = [
-    {
-      'amount': 447.84,
-      'percentage': 36,
-      'name': 'Utilities',
-      'icon': Icons.lightbulb_outline,
-      'color': Colors.orange
-    },
-    {
-      'amount': 149.28,
-      'percentage': 12,
-      'name': 'Expenses',
-      'icon': Icons.receipt_long,
-      'color': Colors.green
-    },
-    {
-      'amount': 248.8,
-      'percentage': 20,
-      'name': 'Payments',
-      'icon': Icons.payment,
-      'color': Colors.blue
-    },
-    {
-      'amount': 99.52,
-      'percentage': 8,
-      'name': 'Subscriptions',
-      'icon': Icons.subscriptions,
-      'color': Colors.red
-    },
-    {
-      'amount': 298.56,
-      'percentage': 24,
-      'name': 'Other',
-      'icon': Icons.category,
-      'color': Colors.purple
-    },
-  ];
+  @override
+  void dispose() {
+    _pageController.dispose(); // Jangan lupa dispose controller
+    super.dispose();
+  }
+
+  Map<String, dynamic> _getCategoryDetails(
+      BuildContext context, String categoryName) {
+    // ... (kode ini tidak berubah)
+    final categoryVM = Provider.of<CategoryViewModel>(context, listen: false);
+    final category = categoryVM.allCategories.firstWhere(
+      (cat) => cat.name == categoryName,
+      orElse: () =>
+          Category(name: 'Lain-lain', icon: Icons.category, type: 'expense'),
+    );
+    const defaultColors = {
+      'Utilities': Colors.orange,
+      'Expenses': Colors.green,
+      'Payments': Colors.blue,
+      'Subscriptions': Colors.red,
+      'Other': Colors.purple,
+      'Makan & Minum': Colors.green,
+      'Belanja': Colors.orange,
+      'Transportasi': Colors.blue,
+      'Tagihan': Colors.red,
+      'Hiburan': Colors.purple,
+      'Kesehatan': Colors.teal,
+      'Investasi/Tabungan': Colors.indigo,
+      'Tujuan Finansial': Colors.cyan,
+      'Lain-lain': Colors.grey,
+    };
+    return {
+      'icon': category.icon,
+      'color': defaultColors[category.name] ?? Colors.black,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: ListView(
-        children: [
-          _buildHeader(),
-          _buildChartSection(),
-          _buildCategoriesSection(),
-        ],
-      ),
+    return Consumer<DashboardViewModel>(
+      builder: (context, viewModel, child) {
+        return Scaffold(
+          backgroundColor: Colors.grey[100],
+          body: RefreshIndicator(
+            onRefresh: viewModel.loadData,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildHeader(),
+                // --- KONTEN UTAMA SEKARANG ADA DI SINI ---
+                Column(
+                  children: [
+                    SizedBox(
+                      height: 250, // Beri tinggi agar indikator muat
+                      child: PageView(
+                        controller: _pageController,
+                        children: [
+                          // Halaman 1: Pie Chart
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: _buildPieChartSection(context, viewModel),
+                          ),
+                          // Halaman 2: Line Chart
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: _buildLineChartSection(context, viewModel),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Indikator halaman (titik-titik)
+                    SmoothPageIndicator(
+                      controller: _pageController,
+                      count: 2,
+                      effect: WormEffect(
+                        dotHeight: 8,
+                        dotWidth: 8,
+                        activeDotColor: Theme.of(context).primaryColor,
+                        dotColor: Colors.grey.shade300,
+                      ),
+                    ),
+                  ],
+                ),
+                _buildCategoriesSection(context, viewModel),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // Widget untuk header "Insights"
   Widget _buildHeader() {
+    // ... (kode ini tidak berubah)
     return const Padding(
       padding: EdgeInsets.fromLTRB(20, 40, 20, 20),
       child: Text(
@@ -78,155 +127,161 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // Widget untuk bagian diagram lingkaran (Donut Chart)
-  Widget _buildChartSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 5,
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 200,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  PieChart(
-                    PieChartData(
-                      sectionsSpace: 8, // Memberi jarak antar segmen
-                      centerSpaceRadius: 70, // Ukuran lubang di tengah
-                      startDegreeOffset: -90,
-                      sections: _getChartSections(),
-                    ),
-                  ),
-                  const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Spent this April',
-                          style: TextStyle(color: Colors.grey)),
-                      SizedBox(height: 8),
-                      Text(
-                        '\$1,244.65',
-                        style: TextStyle(
-                            fontSize: 28, fontWeight: FontWeight.bold),
+  // --- NAMA FUNGSI DIUBAH MENJADI LEBIH SPESIFIK ---
+  Widget _buildPieChartSection(
+      BuildContext context, DashboardViewModel viewModel) {
+    // ... (kode ini sama seperti _buildChartSection sebelumnya)
+    final totalExpense = viewModel.currentMonthExpense;
+    final formattedTotal =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+            .format(totalExpense);
+    final currentMonth = DateFormat('MMMM', 'id_ID').format(DateTime.now());
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          height: 200,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              viewModel.expenseByCategory.isEmpty
+                  ? const Center(child: Text("Belum ada data pengeluaran."))
+                  : PieChart(
+                      PieChartData(
+                        sectionsSpace: 8,
+                        centerSpaceRadius: 70,
+                        startDegreeOffset: -90,
+                        sections: _getChartSections(context, viewModel),
                       ),
-                    ],
-                  ),
+                    ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Pengeluaran $currentMonth',
+                      style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 8),
+                  Text(formattedTotal,
+                      style: const TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.bold)),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildTimeToggle(),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  // Helper untuk membuat segmen-segmen chart dari data kategori
-  List<PieChartSectionData> _getChartSections() {
-    return categories.map((category) {
+  // --- WIDGET BARU UNTUK LINE CHART ---
+  Widget _buildLineChartSection(
+      BuildContext context, DashboardViewModel viewModel) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          height: 200,
+          child: LineChart(
+            LineChartData(
+              gridData: const FlGridData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    interval: 1,
+                    getTitlesWidget: (value, meta) {
+                      final now = DateTime.now();
+                      final day =
+                          now.subtract(Duration(days: 6 - value.toInt()));
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: Text(DateFormat('E').format(day),
+                            style: const TextStyle(fontSize: 12)),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 0,
+              maxX: 6,
+              minY: 0,
+              maxY: viewModel.maxWeeklyExpense *
+                  1.2, // Beri sedikit ruang di atas
+              lineBarsData: [
+                LineChartBarData(
+                  spots: viewModel.weeklyExpenseSpots,
+                  isCurved: true,
+                  color: Theme.of(context).primaryColor,
+                  barWidth: 4,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Text('Pengeluaran 7 Hari Terakhir',
+            style: TextStyle(color: Colors.grey)),
+      ],
+    );
+  }
+
+  List<PieChartSectionData> _getChartSections(
+      BuildContext context, DashboardViewModel viewModel) {
+    // ... (kode ini tidak berubah)
+    final totalExpense = viewModel.currentMonthExpense;
+    if (totalExpense == 0) return [];
+    final filteredCategories = viewModel.expenseByCategory.entries
+        .where((entry) => entry.value > 0)
+        .toList();
+    return filteredCategories.map((entry) {
+      final details = _getCategoryDetails(context, entry.key);
+      final percentage = (entry.value / totalExpense) * 100;
       return PieChartSectionData(
-        color: category['color'],
-        value: category['percentage'].toDouble(),
-        title: '${category['percentage']}%',
+        color: details['color'],
+        value: percentage,
+        title: '${percentage.toStringAsFixed(0)}%',
         radius: 25,
         titleStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       );
     }).toList();
   }
 
-  // Widget untuk tombol toggle "Week, Month, Year"
-  Widget _buildTimeToggle() {
-    final List<String> labels = ['Week', 'Month', 'Year'];
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(labels.length, (index) {
-          final bool isSelected = _timeTabIndex == index;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _timeTabIndex = index;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
-                            spreadRadius: 1,
-                            blurRadius: 5,
-                          )
-                        ]
-                      : [],
-                ),
-                child: Center(
-                  child: Text(
-                    labels[index],
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  // Widget untuk bagian bawah "Spending Categories"
-  Widget _buildCategoriesSection() {
+  Widget _buildCategoriesSection(
+      BuildContext context, DashboardViewModel viewModel) {
+    // ... (kode ini tidak berubah)
+    final categories = viewModel.expenseByCategory.entries.toList();
+    final totalExpense = viewModel.currentMonthExpense;
     return Container(
       margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
+            topLeft: Radius.circular(30), topRight: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 5,
-            blurRadius: 10,
-          )
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 5,
+              blurRadius: 10)
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Spending Categories',
+          const Text('Kategori Pengeluaran',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
           GridView.builder(
@@ -240,8 +295,19 @@ class _DashboardPageState extends State<DashboardPage> {
               childAspectRatio: 1.6,
             ),
             itemBuilder: (context, index) {
-              final category = categories[index];
-              return _buildCategoryCard(category);
+              final categoryEntry = categories[index];
+              final details = _getCategoryDetails(context, categoryEntry.key);
+              final percentage = totalExpense > 0
+                  ? (categoryEntry.value / totalExpense) * 100
+                  : 0;
+              final categoryData = {
+                'amount': categoryEntry.value,
+                'percentage': percentage.toInt(),
+                'name': categoryEntry.key,
+                'icon': details['icon'],
+                'color': details['color'],
+              };
+              return _buildCategoryCard(categoryData);
             },
           )
         ],
@@ -249,34 +315,31 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // Widget untuk satu kartu kategori
   Widget _buildCategoryCard(Map<String, dynamic> category) {
+    // ... (kode ini tidak berubah)
+    final formattedAmount =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+            .format(category['amount']);
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: category['color'].withOpacity(0.1),
+        color: (category['color'] as Color).withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('\$${category['amount']}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('${category['percentage']}%',
-                  style: TextStyle(color: Colors.grey[700])),
-            ],
-          ),
+          Icon(category['icon'], color: category['color'], size: 24),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(category['icon'], color: category['color']),
-              const SizedBox(height: 5),
-              Text(category['name'], style: TextStyle(color: Colors.grey[800])),
+              Text(formattedAmount,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 2),
+              Text(category['name'],
+                  style: TextStyle(color: Colors.grey[800], fontSize: 14)),
             ],
           )
         ],

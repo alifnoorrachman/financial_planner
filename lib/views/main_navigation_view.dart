@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'account_view.dart';
 import 'transaction_list_view.dart';
-import 'charts_dashboard_view.dart';
 import 'education_view.dart';
 import 'add_transaction_view.dart'; // Impor halaman tambah transaksi
+import 'dashboard_view.dart';
 
 class MainNavigationView extends StatefulWidget {
   const MainNavigationView({super.key});
@@ -18,7 +18,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
 
   static const List<Widget> _pages = <Widget>[
     TransactionListView(),
-    ChartsDashboardView(),
+    DashboardPage(),
     EducationView(),
     AccountView(),
   ];

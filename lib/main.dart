@@ -36,11 +36,19 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) => CategoryViewModel()),
         ChangeNotifierProvider(create: (ctx) => AccountViewModel()),
         ChangeNotifierProvider(create: (ctx) => TransactionViewModel()),
-        ChangeNotifierProvider(create: (ctx) => DashboardViewModel()),
+        ChangeNotifierProxyProvider<CategoryViewModel, DashboardViewModel>(
+          create: (context) => DashboardViewModel(
+            categoryViewModel:
+                Provider.of<CategoryViewModel>(context, listen: false),
+          ),
+          update: (context, categoryViewModel, dashboardViewModel) =>
+              DashboardViewModel(categoryViewModel: categoryViewModel),
+        ),
         ChangeNotifierProvider(create: (ctx) => EducationViewModel()),
       ],
       child: MaterialApp(
         title: 'Financial Planner',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.deepPurple,

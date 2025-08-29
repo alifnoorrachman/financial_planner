@@ -23,10 +23,14 @@ class AccountViewModel extends ChangeNotifier {
     await DatabaseService.instance.insertAccount(newAccount);
     await loadAccounts();
   }
-  
-  // Tambahkan fungsi hapus untuk akun
+
   Future<void> deleteAccount(int id) async {
+    // LANGKAH 1: Hapus semua transaksi yang terkait dengan akun ini terlebih dahulu
+    await DatabaseService.instance.deleteTransactionsByAccountId(id);
+
+    // LANGKAH 2: Baru hapus akunnya
     await DatabaseService.instance.deleteAccount(id);
+
     await loadAccounts();
   }
 
