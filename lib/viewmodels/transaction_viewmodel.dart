@@ -14,7 +14,6 @@ class TransactionViewModel extends ChangeNotifier {
   TransactionFilter _currentFilter = TransactionFilter.all;
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
-  // Penambahan state untuk filter kategori
   String? _categoryFilter;
 
   TransactionFilter get currentFilter => _currentFilter;
@@ -66,22 +65,31 @@ class TransactionViewModel extends ChangeNotifier {
         break;
     }
 
-    // Memanggil DatabaseService dengan filter kategori
     _transactions = await DatabaseService.instance.getTransactions(
       startDate: startDate,
       endDate: endDate,
-      category: _categoryFilter, // <-- PEMBARUAN DI SINI
+      category: _categoryFilter,
     );
     notifyListeners();
   }
 
-  // FUNGSI BARU untuk mengatur dan membersihkan filter kategori
   Future<void> setCategoryFilter(String? category) async {
     _categoryFilter = category;
-    // Selalu reset filter tanggal ke 'semua' agar tidak tumpang tindih
     _currentFilter = TransactionFilter.all;
     await loadTransactions();
   }
+
+  // --- FUNGSI BARU DITAMBAHKAN DI SINI ---
+  Future<void> loadTransactionsForCategoryInMonth(
+      String category, DateTime month) async {
+    _categoryFilter = category;
+    _currentFilter = TransactionFilter.custom; // Set filter ke mode kustom
+    // Tentukan awal dan akhir bulan dari parameter
+    _filterStartDate = DateTime(month.year, month.month, 1);
+    _filterEndDate = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+    await loadTransactions();
+  }
+  // --- AKHIR FUNGSI BARU ---
 
   Future<void> changeFilter(TransactionFilter filter) async {
     _currentFilter = filter;
@@ -100,14 +108,15 @@ class TransactionViewModel extends ChangeNotifier {
     await loadTransactions();
   }
 
+  // --- PEMBARUAN PADA clearFilter ---
   Future<void> clearFilter() async {
     _currentFilter = TransactionFilter.all;
     _filterStartDate = null;
     _filterEndDate = null;
-    // Pastikan filter kategori juga bersih saat ini dipanggil dari home
-    _categoryFilter = null;
+    _categoryFilter = null; // Memastikan _categoryFilter juga bersih
     await loadTransactions();
   }
+  // --- AKHIR PEMBARUAN ---
 
   Future<void> handleTransaction({
     int? id,
@@ -129,30 +138,24 @@ class TransactionViewModel extends ChangeNotifier {
     );
 
     if (id == null) {
-      // --- MODE TAMBAH (LOGIKA LAMA SUDAH BENAR) ---
       await DatabaseService.instance.insertTransaction(newTransaction);
       double adjustment = type == 'income' ? amount : -amount;
       await DatabaseService.instance
           .adjustAccountBalance(accountId, adjustment);
     } else {
-      // --- MODE EDIT (LOGIKA BARU YANG BENAR) ---
-      // 1. Ambil data transaksi lama dari database
       final oldTransaction =
           await DatabaseService.instance.getTransactionById(id);
-      if (oldTransaction == null) return; // Transaksi tidak ditemukan
+      if (oldTransaction == null) return;
 
-      // 2. Hitung efek saldo lama dan kembalikan (reverse)
       double oldEffect = oldTransaction.type == 'income'
           ? oldTransaction.amount
           : -oldTransaction.amount;
       await DatabaseService.instance
           .adjustAccountBalance(oldTransaction.accountId, -oldEffect);
 
-      // 3. Terapkan efek saldo baru
       double newEffect = type == 'income' ? amount : -amount;
       await DatabaseService.instance.adjustAccountBalance(accountId, newEffect);
 
-      // 4. Baru update data transaksinya
       await DatabaseService.instance.updateTransaction(newTransaction);
     }
 
@@ -160,19 +163,16 @@ class TransactionViewModel extends ChangeNotifier {
   }
 
   Future<void> deleteTransaction(int id) async {
-    // 1. Ambil data transaksi yang akan dihapus
     final transactionToDelete =
         await DatabaseService.instance.getTransactionById(id);
     if (transactionToDelete == null) return;
 
-    // 2. Hitung efek saldo dan kembalikan (reverse)
     double oldEffect = transactionToDelete.type == 'income'
         ? transactionToDelete.amount
         : -transactionToDelete.amount;
     await DatabaseService.instance
         .adjustAccountBalance(transactionToDelete.accountId, -oldEffect);
 
-    // 3. Baru hapus transaksinya
     await DatabaseService.instance.deleteTransaction(id);
 
     await loadTransactions();

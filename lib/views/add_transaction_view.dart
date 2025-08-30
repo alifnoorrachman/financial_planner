@@ -188,10 +188,15 @@ class _AddTransactionViewState extends State<AddTransactionView> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Nominal tidak boleh kosong';
+                    return 'Jumlah tidak boleh kosong';
                   }
-                  if (double.tryParse(value) == null) {
+                  final amount = double.tryParse(value);
+                  if (amount == null) {
                     return 'Masukkan angka yang valid';
+                  }
+                  // --- TAMBAHAN VALIDASI ---
+                  if (amount <= 0) {
+                    return 'Jumlah harus lebih dari nol';
                   }
                   return null;
                 },

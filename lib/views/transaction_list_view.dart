@@ -9,13 +9,31 @@ import '../viewmodels/dashboard_viewmodel.dart';
 import 'add_transaction_view.dart';
 import 'widgets/filter_modal_widget.dart';
 
-class TransactionListView extends StatelessWidget {
+// 1. Diubah menjadi StatefulWidget
+class TransactionListView extends StatefulWidget {
   const TransactionListView({super.key});
 
+  @override
+  State<TransactionListView> createState() => _TransactionListViewState();
+}
+
+class _TransactionListViewState extends State<TransactionListView> {
+  // 2. Logika initState yang Anda berikan ditambahkan di sini
+  @override
+  void initState() {
+    super.initState();
+    // Membersihkan filter kategori setiap kali halaman ini dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TransactionViewModel>(context, listen: false)
+          .setCategoryFilter(null);
+    });
+  }
+
+  // 3. Semua method pembantu dan build dipindahkan ke dalam State
   void _showFilterModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Agar modal tidak menutupi keyboard
+      isScrollControlled: true,
       builder: (ctx) {
         return const FilterModalWidget();
       },
@@ -134,8 +152,6 @@ class TransactionListView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-
-            // --- PERUBAHAN UI FILTER DI SINI ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -143,14 +159,11 @@ class TransactionListView extends StatelessWidget {
                     style:
                         TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 IconButton(
-                  icon: Icon(Icons.filter_list,
-                      color: Colors.grey[700]), // Ganti ikon kalender ke filter
-                  onPressed: () => _showFilterModal(context), // Panggil modal
+                  icon: Icon(Icons.filter_list, color: Colors.grey[700]),
+                  onPressed: () => _showFilterModal(context),
                 ),
               ],
             ),
-
-            // Tampilkan info filter jika sedang aktif
             if (transactionViewModel.filterStartDate != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
@@ -169,10 +182,7 @@ class TransactionListView extends StatelessWidget {
                   ],
                 ),
               ),
-            // --- AKHIR PERUBAHAN UI FILTER ---
-
             const SizedBox(height: 8),
-
             if (groupedTransactions.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 40.0),

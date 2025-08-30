@@ -8,10 +8,10 @@ class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
 
   @override
-  _OnboardingViewState createState() => _OnboardingViewState();
+  OnboardingViewState createState() => OnboardingViewState();
 }
 
-class _OnboardingViewState extends State<OnboardingView> {
+class OnboardingViewState extends State<OnboardingView> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 

@@ -25,12 +25,10 @@ class AccountViewModel extends ChangeNotifier {
   }
 
   Future<void> deleteAccount(int id) async {
-    // LANGKAH 1: Hapus semua transaksi yang terkait dengan akun ini terlebih dahulu
-    await DatabaseService.instance.deleteTransactionsByAccountId(id);
+    // Hapus baris ini karena database sudah menanganinya secara otomatis
+    // await DatabaseService.instance.deleteTransactionsByAccountId(id);
 
-    // LANGKAH 2: Baru hapus akunnya
     await DatabaseService.instance.deleteAccount(id);
-
     await loadAccounts();
   }
 

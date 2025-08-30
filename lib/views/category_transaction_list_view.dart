@@ -10,8 +10,13 @@ import 'widgets/empty_state_widget.dart';
 
 class CategoryTransactionListView extends StatefulWidget {
   final String categoryName;
+  final DateTime selectedMonth; // <-- TERIMA PARAMETER BULAN
 
-  const CategoryTransactionListView({super.key, required this.categoryName});
+  const CategoryTransactionListView({
+    super.key,
+    required this.categoryName,
+    required this.selectedMonth, // <-- WAJIB DIISI
+  });
 
   @override
   State<CategoryTransactionListView> createState() =>
@@ -23,19 +28,19 @@ class _CategoryTransactionListViewState
   @override
   void initState() {
     super.initState();
-    // Saat halaman dibuka, langsung set filter kategori di ViewModel
+    // Panggil fungsi baru di ViewModel dengan kategori DAN bulan
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TransactionViewModel>(context, listen: false)
-          .setCategoryFilter(widget.categoryName);
+          .loadTransactionsForCategoryInMonth(
+              widget.categoryName, widget.selectedMonth);
     });
   }
 
   @override
   void dispose() {
-    // Saat halaman ditutup, bersihkan filter kategori agar tidak mempengaruhi halaman utama
+    // Saat halaman ditutup, bersihkan semua filter
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TransactionViewModel>(context, listen: false)
-          .setCategoryFilter(null);
+      Provider.of<TransactionViewModel>(context, listen: false).clearFilter();
     });
     super.dispose();
   }
@@ -45,7 +50,6 @@ class _CategoryTransactionListViewState
     final transactionVM = Provider.of<TransactionViewModel>(context);
     final categoryVM = Provider.of<CategoryViewModel>(context, listen: false);
 
-    // Dapatkan detail (seperti ikon) dari kategori saat ini
     final categoryDetails = categoryVM.allCategories.firstWhere(
         (cat) => cat.name == widget.categoryName,
         orElse: () =>
@@ -53,53 +57,24 @@ class _CategoryTransactionListViewState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.categoryName),
+        // Judul AppBar diupdate untuk menampilkan bulan juga
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.categoryName),
+            Text(
+              DateFormat('MMMM yyyy', 'id_ID').format(widget.selectedMonth),
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+            )
+          ],
+        ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 1,
       ),
-      body: Column(
-        children: [
-          // Widget untuk Filter Chip
-          _buildFilterChips(transactionVM),
-          Expanded(
-            child: _buildGroupedTransactionList(
-                transactionVM, categoryDetails.icon),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChips(TransactionViewModel viewModel) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          FilterChip(
-            label: const Text('Hari ini'),
-            selected: viewModel.currentFilter == TransactionFilter.today,
-            onSelected: (selected) {
-              viewModel.changeFilter(TransactionFilter.today);
-            },
-          ),
-          FilterChip(
-            label: const Text('Minggu ini'),
-            selected: viewModel.currentFilter == TransactionFilter.thisWeek,
-            onSelected: (selected) {
-              viewModel.changeFilter(TransactionFilter.thisWeek);
-            },
-          ),
-          FilterChip(
-            label: const Text('Bulan ini'),
-            selected: viewModel.currentFilter == TransactionFilter.thisMonth,
-            onSelected: (selected) {
-              viewModel.changeFilter(TransactionFilter.thisMonth);
-            },
-          ),
-        ],
-      ),
+      // Halaman ini sekarang tidak lagi memerlukan filter chip
+      body: _buildGroupedTransactionList(transactionVM, categoryDetails.icon),
     );
   }
 
@@ -112,64 +87,31 @@ class _CategoryTransactionListViewState
       );
     }
 
-    final groupedTransactions = viewModel.groupedTransactions;
-    final months = groupedTransactions.keys.toList();
+    // Karena sudah difilter di ViewModel, kita bisa langsung tampilkan
+    final transactions = viewModel.transactions;
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      itemCount: months.length,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      itemCount: transactions.length,
       itemBuilder: (context, index) {
-        final month = months[index];
-        final transactionsInMonth = groupedTransactions[month]!;
-
-        // Hitung total pengeluaran untuk bulan ini
-        final totalInMonth = transactionsInMonth.fold<double>(
-            0, (sum, item) => sum + item.amount);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    month,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    NumberFormat.currency(
-                            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
-                        .format(totalInMonth),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.redAccent),
-                  ),
-                ],
-              ),
+        final transaction = transactions[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            leading: CircleAvatar(
+              child: Icon(categoryIcon, size: 20),
             ),
-            ...transactionsInMonth.map((transaction) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(categoryIcon, size: 20),
-                  ),
-                  title: Text(transaction.description),
-                  subtitle: Text(DateFormat('EEEE, d MMM', 'id_ID')
-                      .format(transaction.date)),
-                  trailing: Text(
-                    NumberFormat.currency(
-                            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
-                        .format(transaction.amount),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.red),
-                  ),
-                ),
-              );
-            }).toList(),
-          ],
+            title: Text(transaction.description),
+            subtitle: Text(DateFormat('EEEE, d MMM yyyy', 'id_ID')
+                .format(transaction.date)),
+            trailing: Text(
+              NumberFormat.currency(
+                      locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+                  .format(transaction.amount),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+          ),
         );
       },
     );
