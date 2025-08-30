@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart'; // <-- Tambahkan import ini
-
+import 'category_transaction_list_view.dart';
 import '../models/category_model.dart';
 import '../viewmodels/category_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
@@ -18,12 +18,11 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // --- KONTROL BARU UNTUK PAGEVIEW ---
   final PageController _pageController = PageController();
 
   @override
   void dispose() {
-    _pageController.dispose(); // Jangan lupa dispose controller
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -70,21 +69,18 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: EdgeInsets.zero,
               children: [
                 _buildHeader(),
-                // --- KONTEN UTAMA SEKARANG ADA DI SINI ---
                 Column(
                   children: [
                     SizedBox(
-                      height: 250, // Beri tinggi agar indikator muat
+                      height: 250,
                       child: PageView(
                         controller: _pageController,
                         children: [
-                          // Halaman 1: Pie Chart
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 20.0),
                             child: _buildPieChartSection(context, viewModel),
                           ),
-                          // Halaman 2: Line Chart
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 20.0),
@@ -94,7 +90,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Indikator halaman (titik-titik)
                     SmoothPageIndicator(
                       controller: _pageController,
                       count: 2,
@@ -307,7 +302,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 'icon': details['icon'],
                 'color': details['color'],
               };
-              return _buildCategoryCard(categoryData);
+              // <-- PEMBARUAN: Kirim 'context' ke _buildCategoryCard
+              return _buildCategoryCard(context, categoryData);
             },
           )
         ],
@@ -315,34 +311,66 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildCategoryCard(Map<String, dynamic> category) {
-    // ... (kode ini tidak berubah)
+  Widget _buildCategoryCard(
+      BuildContext context, Map<String, dynamic> category) {
     final formattedAmount =
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
             .format(category['amount']);
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: (category['color'] as Color).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(category['icon'], color: category['color'], size: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(formattedAmount,
+
+    return InkWell(
+      // Dibungkus dengan InkWell agar bisa diklik
+      onTap: () {
+        // Aksi navigasi ke halaman detail
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CategoryTransactionListView(
+              categoryName: category['name'],
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: (category['color'] as Color).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(category['icon'], color: category['color'], size: 24),
+                Text(
+                  '${category['percentage']}%',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formattedAmount,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 2),
-              Text(category['name'],
-                  style: TextStyle(color: Colors.grey[800], fontSize: 14)),
-            ],
-          )
-        ],
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  category['name'],
+                  style: TextStyle(color: Colors.grey[800], fontSize: 14),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }

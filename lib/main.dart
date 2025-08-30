@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
-// Hapus import SharedPreferences, kita tidak memerlukannya di sini lagi
-// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- 1. Pastikan import ini ada
 
 import 'services/database_service.dart';
 import 'viewmodels/category_viewmodel.dart';
@@ -14,20 +12,30 @@ import 'viewmodels/account_viewmodel.dart';
 import 'viewmodels/transaction_viewmodel.dart';
 import 'viewmodels/dashboard_viewmodel.dart';
 import 'viewmodels/education_viewmodel.dart';
-import 'views/splash_view.dart'; // Pastikan import ini benar
+import 'views/main_navigation_view.dart';
+import 'views/onboarding_view.dart'; // <-- 2. Pastikan import ini ada
 
 Future<void> main() async {
-  // Inisialisasi dasar yang diperlukan
+  // Inisialisasi wajib sebelum aplikasi jalan
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
   await DatabaseService.instance.database;
 
-  // Langsung jalankan aplikasi, selalu mulai dari SplashView
-  runApp(const MyApp());
+  // --- LOGIKA ONBOARDING DIMULAI DI SINI ---
+  final prefs = await SharedPreferences.getInstance();
+  // Mengecek apakah 'hasSeenOnboarding' sudah pernah disimpan.
+  // Jika belum, nilainya akan 'false', dan onboarding akan muncul.
+  final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+  // --- AKHIR LOGIKA ONBOARDING ---
+
+  // 3. Kirim status onboarding ke widget utama aplikasi
+  runApp(MyApp(hasSeenOnboarding: hasSeenOnboarding));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // 4. Terima status onboarding dari main()
+  final bool hasSeenOnboarding;
+  const MyApp({super.key, required this.hasSeenOnboarding});
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +73,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        // Halaman awal aplikasi SELALU SplashView
-        home: const SplashView(),
+        // --- 5. Tentukan halaman mana yang jadi halaman utama ---
+        home: hasSeenOnboarding
+            ? const MainNavigationView() // Jika sudah lihat onboarding, ke sini
+            : const OnboardingView(), // Jika belum, ke sini
       ),
     );
   }

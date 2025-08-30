@@ -1,31 +1,22 @@
 // test/widget_test.dart
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-// Ganti 'financial_planner_app/main.dart' dengan path yang benar jika berbeda
 import 'package:financial_planner_app/main.dart';
+import 'package:financial_planner_app/views/main_navigation_view.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    // Panggil MyApp tanpa parameter lagi.
-    await tester.pumpWidget(const MyApp()); // <-- PERBAIKAN DI SINI
+  testWidgets('App starts and displays main navigation view',
+      (WidgetTester tester) async {
+    // Build aplikasi kita dan trigger sebuah frame.
+    // Kita harus memberikan nilai untuk 'hasSeenOnboarding'.
+    // Untuk tes ini, kita asumsikan pengguna sudah pernah melihat onboarding (true).
+    await tester.pumpWidget(const MyApp(hasSeenOnboarding: true));
 
-    // CATATAN: Kode di bawah ini kemungkinan besar akan GAGAL karena
-    // aplikasi Anda tidak lagi memiliki counter.
-    // Ini adalah sisa dari template default Flutter.
+    // Lakukan pumpAndSettle untuk menunggu semua animasi/transisi selesai.
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verifikasi bahwa halaman utama (MainNavigationView) muncul.
+    // Ini adalah tes yang lebih relevan untuk aplikasi Anda.
+    expect(find.byType(MainNavigationView), findsOneWidget);
   });
 }

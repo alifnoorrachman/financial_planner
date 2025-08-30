@@ -14,6 +14,8 @@ class TransactionViewModel extends ChangeNotifier {
   TransactionFilter _currentFilter = TransactionFilter.all;
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
+  // Penambahan state untuk filter kategori
+  String? _categoryFilter;
 
   TransactionFilter get currentFilter => _currentFilter;
   DateTime? get filterStartDate => _filterStartDate;
@@ -64,11 +66,21 @@ class TransactionViewModel extends ChangeNotifier {
         break;
     }
 
+    // Memanggil DatabaseService dengan filter kategori
     _transactions = await DatabaseService.instance.getTransactions(
       startDate: startDate,
       endDate: endDate,
+      category: _categoryFilter, // <-- PEMBARUAN DI SINI
     );
     notifyListeners();
+  }
+
+  // FUNGSI BARU untuk mengatur dan membersihkan filter kategori
+  Future<void> setCategoryFilter(String? category) async {
+    _categoryFilter = category;
+    // Selalu reset filter tanggal ke 'semua' agar tidak tumpang tindih
+    _currentFilter = TransactionFilter.all;
+    await loadTransactions();
   }
 
   Future<void> changeFilter(TransactionFilter filter) async {
@@ -92,6 +104,8 @@ class TransactionViewModel extends ChangeNotifier {
     _currentFilter = TransactionFilter.all;
     _filterStartDate = null;
     _filterEndDate = null;
+    // Pastikan filter kategori juga bersih saat ini dipanggil dari home
+    _categoryFilter = null;
     await loadTransactions();
   }
 

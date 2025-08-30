@@ -24,7 +24,6 @@ class DatabaseService {
   }
 
   Future _createDB(sqflite.Database db, int version) async {
-    // Membuat tabel transactions
     await db.execute('''
       CREATE TABLE transactions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +36,6 @@ class DatabaseService {
       )
     ''');
 
-    // Membuat tabel untuk Akun
     await db.execute('''
       CREATE TABLE accounts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +52,24 @@ class DatabaseService {
     }
   }
 
+  // ===============================================================
+  // --- FUNGSI YANG HILANG DITAMBAHKAN DI SINI ---
+  Future<Transaction?> getTransactionById(int id) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return Transaction.fromMap(maps.first);
+    } else {
+      return null;
+    }
+  }
+  // ===============================================================
+
   // --- FUNGSI UNTUK TRANSAKSI ---
   Future<void> insertTransaction(Transaction transaction) async {
     final db = await instance.database;
@@ -61,28 +77,42 @@ class DatabaseService {
         conflictAlgorithm: sqflite.ConflictAlgorithm.replace);
   }
 
-  Future<List<Transaction>> getTransactions(
-      {DateTime? startDate, DateTime? endDate}) async {
+  Future<List<Transaction>> getTransactions({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+  }) async {
     final db = await instance.database;
     String? whereString;
-    List<String>? whereArgs;
-    if (startDate != null && endDate != null) {
-      whereString = 'date >= ? AND date <= ?';
-      whereArgs = [startDate.toIso8601String(), endDate.toIso8601String()];
-    }
-    final result = await db.query('transactions',
-        where: whereString, whereArgs: whereArgs, orderBy: 'date DESC');
-    return result.map((json) => Transaction.fromMap(json)).toList();
-  }
+    List<dynamic> whereArgs = [];
 
-  Future<Transaction?> getTransactionById(int id) async {
-    final db = await instance.database;
-    final maps =
-        await db.query('transactions', where: 'id = ?', whereArgs: [id]);
-    if (maps.isNotEmpty) {
-      return Transaction.fromMap(maps.first);
+    if (startDate != null && endDate != null) {
+      whereString = 'date BETWEEN ? AND ?';
+      whereArgs.addAll([
+        startDate.toIso8601String(),
+        endDate.toIso8601String(),
+      ]);
     }
-    return null;
+
+    if (category != null) {
+      if (whereString == null) {
+        whereString = 'category = ?';
+      } else {
+        whereString += ' AND category = ?';
+      }
+      whereArgs.add(category);
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'transactions',
+      where: whereString,
+      whereArgs: whereArgs,
+      orderBy: 'date DESC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return Transaction.fromMap(maps[i]);
+    });
   }
 
   Future<void> updateTransaction(Transaction transaction) async {
@@ -121,7 +151,6 @@ class DatabaseService {
   Future<void> deleteAccount(int id) async {
     final db = await instance.database;
     await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
-    // Opsional: Hapus juga semua transaksi yang terkait dengan akun ini
     await db.delete('transactions', where: 'accountId = ?', whereArgs: [id]);
   }
 
