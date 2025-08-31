@@ -114,8 +114,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   viewModel.selectedMonth.month - 1);
               await viewModel.changeMonth(prevMonth);
               // Muat juga budget untuk bulan yang baru
-              await Provider.of<CategoryViewModel>(context, listen: false)
-                  .loadBudgetsForMonth(prevMonth);
+              if (mounted) {
+                await Provider.of<CategoryViewModel>(context, listen: false)
+                    .loadBudgetsForMonth(prevMonth);
+              }
             },
           ),
           Text(
@@ -132,8 +134,10 @@ class _DashboardPageState extends State<DashboardPage> {
                         viewModel.selectedMonth.month + 1);
                     await viewModel.changeMonth(nextMonth);
                     // Muat juga budget untuk bulan yang baru
-                    await Provider.of<CategoryViewModel>(context, listen: false)
-                        .loadBudgetsForMonth(nextMonth);
+                    if (mounted) {
+                      await Provider.of<CategoryViewModel>(context, listen: false)
+                          .loadBudgetsForMonth(nextMonth);
+                    }
                   },
           ),
         ],
@@ -250,7 +254,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withAlpha((0.2 * 255).toInt()),
                   ),
                 ),
               ],
@@ -328,7 +332,7 @@ class _DashboardPageState extends State<DashboardPage> {
             topLeft: Radius.circular(30), topRight: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withAlpha((0.1 * 255).toInt()),
               spreadRadius: 5,
               blurRadius: 10)
         ],
@@ -406,7 +410,7 @@ class _DashboardPageState extends State<DashboardPage> {
         // ... (sisa kode container tidak berubah)
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: (categoryData['color'] as Color).withOpacity(0.1),
+          color: (categoryData['color'] as Color).withAlpha((0.1 * 255).toInt()),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
@@ -437,7 +441,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 if (budget > 0) ...[
                   LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.grey.withOpacity(0.3),
+                    backgroundColor: Colors.grey.withAlpha((0.3 * 255).toInt()),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       progress > 0.8
                           ? Colors.red
